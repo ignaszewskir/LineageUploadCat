@@ -3,10 +3,9 @@
 import logging
 from time import sleep
 
-from .alation_rest import AlationRestAPI
-from .models.alation.auth import AlationAuth
-from .models.alation.bi_server import BIServer
-from .models.alation.job import Job
+from src.alation_rest import AlationRestAPI
+from src.models.alation.auth import AlationAuth
+from src.models.alation.job import Job
 
 LOGGER = logging.getLogger()
 
@@ -84,63 +83,3 @@ class AlationHelpers(AlationRestAPI):
             raise Exception("Could not generate the Alation API access token. Exiting script.")
 
         return api_auth
-
-    def return_virtual_bi_server(self, api_token: str) -> BIServer:
-        """Return the Alation Virtual BI Server that will catalog the Tableau Online Site.
-
-        Args:
-            api_token (str): Alation REST API Authentication Token.
-
-        Returns:
-            BIServer: Alation BIServer Object.
-
-        """
-        # Type Hinting
-        bi_server: BIServer
-        server: BIServer
-
-        config_bi_server = self._create_bi_server_from_configs()
-
-        # Check if the Virtual BI Server Already exists in Alation
-        LOGGER.info('Checking if the Virtual BI Server already exists')
-        bi_servers = self.api_query_bi_servers(api_token=api_token)
-        bi_server = next((server for server in bi_servers if
-                          server.title == config_bi_server.title), None)
-
-        if bi_server:
-            LOGGER.info(
-                f"The Virtual BI Server '{bi_server.title}' already exists. (ID: {bi_server.id})")
-
-        else:
-            LOGGER.info(
-                f"The Virtual BI Server '{config_bi_server.title} does not exists. Creating a Virtual BI"
-                f"Server Now.")
-            bi_server = config_bi_server
-            bi_server.id = self.api_create_bi_server(api_token=api_token,
-                                                     bi_server=[bi_server.api_json_payload])
-
-            if bi_server.id:
-                LOGGER.info(
-                    f"Successfully created the BI Server '{bi_server.title}' (ID: {bi_server.id})")
-            else:
-                raise Exception("The Virtual BI Server ID could not be generated. Exiting Script.")
-
-        return bi_server
-
-    def _create_bi_server_from_configs(self) -> BIServer:
-        """Create a Virtual BI Server from Configuration File.
-
-        Returns:
-            BIServer: Alation BIServer Object.
-
-        """
-        LOGGER.info('Building the Virtual BI Server based on Config File Properties')
-        config_bi_server = BIServer()
-        config_bi_server.title = self.configs['alation_bi_server_name']
-        config_bi_server.connection_key = self.configs['alation_bi_connection_key']
-        config_bi_server.datasource_key = self.configs['alation_bi_datasource_key']
-        config_bi_server.folder_key = self.configs['alation_bi_folder_key']
-        config_bi_server.report_key = self.configs['alation_bi_report_key']
-        config_bi_server.uri = self.configs['tableau_host']
-
-        return config_bi_server
